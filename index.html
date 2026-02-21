@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDD Holdings 深度财务分析 — 巴菲特投资逻辑</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0c10;
+  --card: #12151c;
+  --card-alt: #181c26;
+  --border: #1e2333;
+  --text: #c8cdd8;
+  --text-dim: #6b7280;
+  --heading: #e8ecf4;
+  --accent: #f59e0b;
+  --accent2: #10b981;
+  --accent3: #3b82f6;
+  --red: #ef4444;
+  --green: #22c55e;
+  --orange: #f97316;
+  --purple: #a855f7;
+  --cyan: #06b6d4;
+  --gold: #eab308;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', 'Noto Serif SC', monospace;
+  font-size: 14px;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse 800px 600px at 20% 10%, rgba(245,158,11,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 600px 800px at 80% 30%, rgba(59,130,246,0.03) 0%, transparent 60%),
+    var(--bg);
+}
+
+.noise-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 24px 120px;
+}
+
+/* HERO */
+.hero {
+  text-align: center;
+  padding: 80px 0 60px;
+  position: relative;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(245,158,11,0.15) 0%, transparent 70%);
+  border-radius: 50%;
+  filter: blur(40px);
+}
+
+.hero .ticker {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--accent);
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.hero h1 {
+  font-family: 'Playfair Display', 'Noto Serif SC', serif;
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 900;
+  color: var(--heading);
+  line-height: 1.15;
+  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+}
+
+.hero h1 em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--accent), var(--orange));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero .subtitle {
+  font-size: 15px;
+  color: var(--text-dim);
+  max-width: 700px;
+  margin: 0 auto;
+  line-height: 1.8;
+}
+
+.hero .meta {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.hero .meta span {
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+}
+
+.hero .meta span strong {
+  color: var(--accent);
+}
+
+/* NAV */
+.sticky-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,12,16,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+  margin: 0 -24px;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.sticky-nav ul {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  overflow-x: auto;
+  scrollbar-width: none;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.sticky-nav a {
+  font-size: 12px;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sticky-nav a:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(245,158,11,0.06);
+}
+
+/* SECTIONS */
+section {
+  margin-top: 64px;
+}
+
+section > h2 {
+  font-family: 'Playfair Display', 'Noto Serif SC', serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--heading);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+section > h2 .num {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(245,158,11,0.1);
+  padding: 4px 10px;
+  border-radius: 12px;
+  letter-spacing: 2px;
+}
+
+section > .section-desc {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-bottom: 32px;
+  max-width: 800px;
+}
+
+/* CARDS */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(245,158,11,0.3), transparent);
+}
+
+.card h3 {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.05rem;
+  color: var(--heading);
+  margin-bottom: 20px;
+  font-weight: 700;
+}
+
+/* KPI GRID */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.kpi {
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  position: relative;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.kpi:hover {
+  transform: translateY(-2px);
+  border-color: rgba(245,158,11,0.3);
+}
+
+.kpi .label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.kpi .value {
+  font-family: 'DM Mono', monospace;
+  font-size: 1.6rem;
+  font-weight: 500;
+  color: var(--heading);
+}
+
+.kpi .change {
+  font-size: 12px;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.kpi .change.up { color: var(--green); }
+.kpi .change.down { color: var(--red); }
+
+/* TABLE */
+.data-table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+table.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+table.data-table th {
+  background: var(--card-alt);
+  color: var(--text-dim);
+  font-weight: 500;
+  padding: 12px 16px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+table.data-table th:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--card-alt);
+}
+
+table.data-table td {
+  padding: 10px 16px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  font-family: 'DM Mono', monospace;
+  color: var(--text);
+}
+
+table.data-table td:first-child {
+  text-align: left;
+  color: var(--heading);
+  font-family: 'Noto Serif SC', 'DM Mono', monospace;
+  font-weight: 500;
+  position: sticky;
+  left: 0;
+  background: var(--card);
+  z-index: 1;
+}
+
+table.data-table tr:hover td {
+  background: rgba(245,158,11,0.03);
+}
+
+table.data-table tr.highlight td {
+  background: rgba(245,158,11,0.06);
+  font-weight: 700;
+  color: var(--heading);
+}
+
+table.data-table tr.sub td:first-child {
+  padding-left: 32px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+/* CHART */
+.chart-container {
+  position: relative;
+  height: 380px;
+  margin: 20px 0;
+}
+
+.chart-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .chart-row { grid-template-columns: 1fr; }
+}
+
+/* SANKEY */
+#sankey-container {
+  width: 100%;
+  min-height: 500px;
+  overflow: visible;
+}
+
+#sankey-container svg {
+  width: 100%;
+  font-family: 'DM Mono', monospace;
+}
+
+/* BUFFETT ANALYSIS */
+.buffett-item {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  margin-bottom: 16px;
+}
+
+.buffett-item h4 {
+  font-family: 'Noto Serif SC', serif;
+  color: var(--heading);
+  font-size: 1rem;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.buffett-item .verdict {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.verdict.pass { background: rgba(34,197,94,0.15); color: var(--green); }
+.verdict.warn { background: rgba(249,115,22,0.15); color: var(--orange); }
+.verdict.fail { background: rgba(239,68,68,0.15); color: var(--red); }
+
+.buffett-item p {
+  color: var(--text);
+  line-height: 1.8;
+  font-size: 13.5px;
+}
+
+/* DCF */
+.dcf-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+  margin: 24px 0;
+}
+
+.dcf-card {
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  text-align: center;
+}
+
+.dcf-card .dcf-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 10px;
+}
+
+.dcf-card .dcf-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.dcf-card .dcf-note {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+.conclusion-box {
+  background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(16,185,129,0.06));
+  border: 2px solid var(--accent);
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.conclusion-box h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.conclusion-box p {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 2;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.price-targets {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+.price-target {
+  text-align: center;
+}
+
+.price-target .pt-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.price-target .pt-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.pt-value.fair { color: var(--accent); }
+.pt-value.safety { color: var(--green); }
+.pt-value.current { color: var(--text-dim); }
+
+/* DISCLAIMER */
+.disclaimer {
+  margin-top: 80px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.8;
+  text-align: center;
+}
+
+/* ANIMATIONS */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate {
+  animation: fadeUp 0.6s ease forwards;
+  opacity: 0;
+}
+
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
+</style>
+</head>
+<body>
+
+<div class="noise-overlay"></div>
+
+<div class="container">
+
+<!-- HERO -->
+<header class="hero animate">
+  <div class="ticker">NASDAQ: PDD</div>
+  <h1>PDD Holdings<br>深度财务分析 · <em>巴菲特视角</em></h1>
+  <p class="subtitle">基于 SEC 6-K 公开披露数据，运用巴菲特投资逻辑对拼多多最新季度财务进行全方位审视，包含自由现金流折现估值与安全边际分析。</p>
+  <div class="meta">
+    <span>最新季报 <strong>Q2 2025</strong></span>
+    <span>报告期 <strong>2025.06.30</strong></span>
+    <span>数据来源 <strong>SEC EDGAR</strong></span>
+    <span>货币 <strong>USD (百万)</strong></span>
+    <span>汇率 <strong>1 USD = 7.1636 RMB</strong></span>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="sticky-nav">
+  <ul>
+    <li><a href="#kpi">核心指标</a></li>
+    <li><a href="#income">损益表</a></li>
+    <li><a href="#charts">同比/环比</a></li>
+    <li><a href="#margins">利润率趋势</a></li>
+    <li><a href="#sankey">收入→现金流</a></li>
+    <li><a href="#balance">资产负债</a></li>
+    <li><a href="#cashflow">现金流</a></li>
+    <li><a href="#buffett">巴菲特分析</a></li>
+    <li><a href="#dcf">DCF 估值</a></li>
+    <li><a href="#conclusion">投资结论</a></li>
+  </ul>
+</nav>
+
+<!-- SECTION 1: KPI -->
+<section id="kpi" class="animate delay-1">
+  <h2><span class="num">01</span> 核心财务指标 — Q2 2025</h2>
+  <p class="section-desc">PDD Holdings Q2 2025 (截至2025年6月30日) 关键经营数据速览 · 汇率: 1 USD = 7.1636 RMB</p>
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="label">总收入</div>
+      <div class="value">$14.5B</div>
+      <div class="change up">同比 +7% · 环比 +8.7%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">毛利润</div>
+      <div class="value">$8.11B</div>
+      <div class="change down">同比 -8.3% · 毛利率 55.9%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">营业利润</div>
+      <div class="value">$3.60B</div>
+      <div class="change down">同比 -21%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">净利润</div>
+      <div class="value">$4.29B</div>
+      <div class="change down">同比 -4%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">营销服务收入</div>
+      <div class="value">$7.78B</div>
+      <div class="change up">同比 +13%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">交易服务收入</div>
+      <div class="value">$6.74B</div>
+      <div class="change up">同比 +0.7%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">经营现金流</div>
+      <div class="value">$3.02B</div>
+      <div class="change down">同比 -51%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">现金+短期投资</div>
+      <div class="value">$54.0B</div>
+      <div class="change up">较年初 +16.8%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">稀释每ADS收益</div>
+      <div class="value">$2.90</div>
+      <div class="change down">同比 -4.0%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">营业利润率</div>
+      <div class="value">24.8%</div>
+      <div class="change down">去年同期 33.6%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">净利润率</div>
+      <div class="value">29.6%</div>
+      <div class="change down">去年同期 33.0%</div>
+    </div>
+    <div class="kpi">
+      <div class="label">股东权益</div>
+      <div class="value">$50.5B</div>
+      <div class="change up">较年初 +15.5%</div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 2: INCOME STATEMENT TABLE -->
+<section id="income" class="animate delay-2">
+  <h2><span class="num">02</span> 季度损益表对比</h2>
+  <p class="section-desc">近5个季度完整损益数据 (单位: USD 百万 · 各季度按当季末汇率折算)</p>
+  <div class="card">
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>项目</th>
+            <th>Q2 2024</th>
+            <th>Q3 2024</th>
+            <th>Q4 2024</th>
+            <th>Q1 2025</th>
+            <th>Q2 2025</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight">
+            <td>总收入</td>
+            <td>13,552</td>
+            <td>13,876</td>
+            <td>15,154</td>
+            <td>13,186</td>
+            <td>14,516</td>
+          </tr>
+          <tr class="sub">
+            <td>— 在线营销服务</td>
+            <td>6,858</td>
+            <td>6,890</td>
+            <td>7,810</td>
+            <td>6,714</td>
+            <td>7,776</td>
+          </tr>
+          <tr class="sub">
+            <td>— 交易服务</td>
+            <td>6,694</td>
+            <td>6,986</td>
+            <td>7,343</td>
+            <td>6,472</td>
+            <td>6,740</td>
+          </tr>
+          <tr>
+            <td>营业成本</td>
+            <td>(4,704)</td>
+            <td>(5,544)</td>
+            <td>(4,615)</td>
+            <td>(5,644)</td>
+            <td>(6,402)</td>
+          </tr>
+          <tr class="highlight">
+            <td>毛利润</td>
+            <td>8,848</td>
+            <td>8,332</td>
+            <td>10,539</td>
+            <td>7,542</td>
+            <td>8,114</td>
+          </tr>
+          <tr>
+            <td>销售及营销费用</td>
+            <td>(3,637)</td>
+            <td>(4,257)</td>
+            <td>(4,296)</td>
+            <td>(4,606)</td>
+            <td>(3,798)</td>
+          </tr>
+          <tr>
+            <td>管理费用</td>
+            <td>(257)</td>
+            <td>(252)</td>
+            <td>(286)</td>
+            <td>(229)</td>
+            <td>(214)</td>
+          </tr>
+          <tr>
+            <td>研发费用</td>
+            <td>(406)</td>
+            <td>(428)</td>
+            <td>(518)</td>
+            <td>(493)</td>
+            <td>(501)</td>
+          </tr>
+          <tr class="highlight">
+            <td>营业利润</td>
+            <td>4,547</td>
+            <td>3,392</td>
+            <td>3,506</td>
+            <td>2,217</td>
+            <td>3,601</td>
+          </tr>
+          <tr>
+            <td>投资收益(净)</td>
+            <td>678</td>
+            <td>756</td>
+            <td>752</td>
+            <td>31</td>
+            <td>1,455</td>
+          </tr>
+          <tr>
+            <td>外汇损益(净)</td>
+            <td>8</td>
+            <td>18</td>
+            <td>(56)</td>
+            <td>(33)</td>
+            <td>(112)</td>
+          </tr>
+          <tr>
+            <td>其他收入(净)</td>
+            <td>69</td>
+            <td>263</td>
+            <td>126</td>
+            <td>450</td>
+            <td>17</td>
+          </tr>
+          <tr>
+            <td>所得税</td>
+            <td>(826)</td>
+            <td>(708)</td>
+            <td>(579)</td>
+            <td>(617)</td>
+            <td>(673)</td>
+          </tr>
+          <tr class="highlight">
+            <td>净利润</td>
+            <td>4,470</td>
+            <td>3,488</td>
+            <td>3,760</td>
+            <td>2,032</td>
+            <td>4,293</td>
+          </tr>
+          <tr>
+            <td>稀释EPS (ADS)</td>
+            <td>$3.02</td>
+            <td>$2.36</td>
+            <td>$2.55</td>
+            <td>$1.37</td>
+            <td>$2.90</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 3: YoY & QoQ CHARTS -->
+<section id="charts" class="animate delay-3">
+  <h2><span class="num">03</span> 同比 & 环比趋势图</h2>
+  <p class="section-desc">收入、利润、费用的季度变化趋势对比</p>
+
+  <div class="chart-row">
+    <div class="card">
+      <h3>营收 — 同比增速</h3>
+      <div class="chart-container">
+        <canvas id="revenueYoYChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>营收 — 环比增速</h3>
+      <div class="chart-container">
+        <canvas id="revenueQoQChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="card">
+      <h3>净利润 — 同比增速</h3>
+      <div class="chart-container">
+        <canvas id="netIncomeYoYChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>净利润 — 环比增速</h3>
+      <div class="chart-container">
+        <canvas id="netIncomeQoQChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="card">
+      <h3>季度营收结构 (营销服务 vs 交易服务)</h3>
+      <div class="chart-container">
+        <canvas id="revenueStackChart"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <h3>费用结构季度变化</h3>
+      <div class="chart-container">
+        <canvas id="expenseChart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 4: MARGINS -->
+<section id="margins">
+  <h2><span class="num">04</span> 利润率趋势</h2>
+  <p class="section-desc">毛利率、营业利润率、净利率的季度走势</p>
+  <div class="card">
+    <div class="chart-container" style="height: 420px;">
+      <canvas id="marginChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 5: SANKEY -->
+<section id="sankey">
+  <h2><span class="num">05</span> 收入→自由现金流 桑基图</h2>
+  <p class="section-desc">Q2 2025 从收入到最终自由现金流的完整资金流向可视化 (单位: USD 亿)</p>
+  <div class="card">
+    <div id="sankey-container"></div>
+  </div>
+</section>
+
+<!-- SECTION 6: BALANCE SHEET -->
+<section id="balance">
+  <h2><span class="num">06</span> 资产负债表核心数据</h2>
+  <p class="section-desc">截至2025年6月30日 (单位: USD 百万)</p>
+  <div class="card">
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>项目</th>
+            <th>2024.12.31</th>
+            <th>2025.06.30</th>
+            <th>变化</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight"><td>总资产</td><td>70,503</td><td>79,172</td><td style="color:var(--green)">+12.3%</td></tr>
+          <tr><td>现金及等价物</td><td>8,066</td><td>8,826</td><td style="color:var(--green)">+9.4%</td></tr>
+          <tr><td>受限资金</td><td>9,553</td><td>9,308</td><td style="color:var(--red)">-2.6%</td></tr>
+          <tr><td>短期投资</td><td>38,218</td><td>45,216</td><td style="color:var(--green)">+18.3%</td></tr>
+          <tr><td>其他非流动资产</td><td>11,642</td><td>11,861</td><td style="color:var(--green)">+1.9%</td></tr>
+          <tr class="highlight"><td>总负债</td><td>26,762</td><td>28,658</td><td style="color:var(--red)">+7.1%</td></tr>
+          <tr><td>应付商家款</td><td>12,794</td><td>13,334</td><td style="color:var(--red)">+4.2%</td></tr>
+          <tr><td>应计费用及其他</td><td>9,651</td><td>10,726</td><td style="color:var(--red)">+11.1%</td></tr>
+          <tr><td>可转债(流动)</td><td>741</td><td>738</td><td>-0.4%</td></tr>
+          <tr class="highlight"><td>股东权益</td><td>43,741</td><td>50,514</td><td style="color:var(--green)">+15.5%</td></tr>
+          <tr><td>留存收益</td><td>26,163</td><td>32,514</td><td style="color:var(--green)">+24.3%</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 7: CASH FLOW -->
+<section id="cashflow">
+  <h2><span class="num">07</span> 现金流量</h2>
+  <p class="section-desc">经营活动现金流季度对比 (单位: USD 百万)</p>
+  <div class="card">
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>项目</th>
+            <th>Q2 2024</th>
+            <th>Q3 2024</th>
+            <th>Q4 2024</th>
+            <th>Q1 2025</th>
+            <th>Q2 2025</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight"><td>经营现金流</td><td>6,114</td><td>3,843</td><td>4,048</td><td>2,139</td><td>3,021</td></tr>
+          <tr><td>投资活动现金流</td><td>(5,951)</td><td>(2,360)</td><td>(1,953)</td><td>(880)</td><td>(3,772)</td></tr>
+          <tr><td>筹资活动现金流</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+          <tr><td>汇率影响</td><td>34</td><td>(147)</td><td>54</td><td>(10)</td><td>3</td></tr>
+          <tr class="highlight"><td>现金净变动</td><td>197</td><td>1,336</td><td>2,150</td><td>1,249</td><td>(748)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card" style="margin-top: 20px;">
+    <h3>经营现金流季度趋势</h3>
+    <div class="chart-container">
+      <canvas id="cashflowChart"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 8: BUFFETT ANALYSIS -->
+<section id="buffett">
+  <h2><span class="num">08</span> 巴菲特投资逻辑逐项分析</h2>
+  <p class="section-desc">以伯克希尔·哈撒韦的核心投资框架审视PDD的财务健康度</p>
+
+  <div class="buffett-item">
+    <h4>① 护城河 (Economic Moat) <span class="verdict pass">通过</span></h4>
+    <p>PDD 拥有显著的网络效应护城河。拼多多在中国低线城市的用户渗透率极高，社交拼团机制使其获客成本远低于行业均值。Temu 的海外扩张虽投入巨大，但在全球已形成规模效应。Q2 2025在线营销服务收入同比+13%，说明商家对平台的依赖度仍在提升。交易服务收入增长放缓至+0.7%说明佣金率承压，但总体平台粘性强劲。核心优势：极致性价比定位 + 社交裂变获客 + 农业供应链直连 + Temu全球化。</p>
+  </div>
+
+  <div class="buffett-item">
+    <h4>② 盈利能力的持久性 (Durability of Earnings) <span class="verdict warn">关注</span></h4>
+    <p>Q2 2025 营业利润同比下降21%，净利润下降4%，这是连续第二个季度利润承压。核心原因是营业成本大幅增长36% (履约费用、服务器带宽、支付处理费)。管理层主动投入商家扶持政策，短期换长期。但巴菲特强调利润的"可预测性"——PDD目前正处在Temu海外扩张的高投入期，利润率趋势不稳定。2024年全年净利率28.6%，Q2 2025为29.6%，绝对水平仍然很高，但连续两季度营业利润率从33.6%下滑至24.8%需要密切关注。</p>
+  </div>
+
+  <div class="buffett-item">
+    <h4>③ 资产负债表健康度 (Balance Sheet Strength) <span class="verdict pass">通过</span></h4>
+    <p>这是PDD最亮眼的一项。截至2025年6月30日，现金+短期投资高达$540亿，加上其他非流动资产中的定期存款和债券$119亿，总流动性储备约$659亿。总负债仅$287亿，其中可转债仅$7.4亿。资产负债率仅36.2%，净现金远超负债。巴菲特最欣赏的"堡垒式"资产负债表——即便遇到极端情况，PDD也有充足的弹药。股东权益$505亿，较年初增长15.5%。</p>
+  </div>
+
+  <div class="buffett-item">
+    <h4>④ 资本回报率 (ROIC & ROE) <span class="verdict pass">通过</span></h4>
+    <p>2024全年净利润$157亿，平均股东权益约$368亿，ROE≈42.7%。即使Q2 2025利润下滑，TTM净利润约$137亿，平均权益约$471亿，TTM ROE≈29.0%，远超巴菲特15%的门槛。PDD是轻资产模式，固定资产仅$1.2亿(占总资产0.15%)，资本回报率极高。ROIC同样出色——这是一台"印钞机"式的商业模式。</p>
+  </div>
+
+  <div class="buffett-item">
+    <h4>⑤ 管理层诚信与能力 (Management Quality) <span class="verdict warn">关注</span></h4>
+    <p>创始人黄峥已退出日常管理，现由陈磊和赵佳臻联合管理。管理层在财报中坦诚表示"增长放缓是预期之中"，"短期利润会受投资影响"——这种坦率的沟通态度值得认可。不发放股息、不回购(截至Q2)是一个扣分项。SBC (股权激励) Q2 2025为$2.73亿，较去年同期的$3.38亿有所下降，占营业利润约7.6%，在可接受范围。主要疑虑：VIE架构下的公司治理透明度、中概股特殊风险。</p>
+  </div>
+
+  <div class="buffett-item">
+    <h4>⑥ 自由现金流质量 (Free Cash Flow Quality) <span class="verdict warn">关注</span></h4>
+    <p>Q2 2025 经营现金流$30.2亿，同比大幅下降51% (去年同期$61.1亿)，主要是营运资本变动不利。全年来看，2024年全年经营现金流$170亿，资本开支极低(PDD为平台模式，几乎无重资产投入)，自由现金流约$168亿。2025上半年经营现金流$51.9亿 vs 2024上半年$90.6亿，下降明显。巴菲特重视现金流的稳定性——PDD的现金流波动较大(与预付款、商家保证金等运营资本高度相关)，这点需要持续观察。TTM自由现金流约$131亿。</p>
+  </div>
+
+  <div class="buffett-item">
+    <h4>⑦ 可理解的商业模式 (Circle of Competence) <span class="verdict pass">通过</span></h4>
+    <p>PDD的核心业务清晰：中国电商平台(拼多多) + 海外电商(Temu)。商业模式简单——收取商家广告费(在线营销服务)和交易佣金(交易服务)。不涉及复杂的金融衍生品或难以估值的资产。巴菲特一直强调"买你能理解的生意"，PDD的变现模式直截了当。不过海外Temu业务目前仍在烧钱扩张阶段，其盈利时间表有一定不确定性。</p>
+  </div>
+
+  <div class="buffett-item">
+    <h4>⑧ 合理估值 (Margin of Safety) <span class="verdict pass">通过</span></h4>
+    <p>以当前市值约$1,660亿计算，对应TTM P/E约12.1倍，P/FCF约12.7倍。对于一家TTM营收$572亿、ROE>29%、坐拥$659亿+现金的公司而言，这个估值极具吸引力。扣除净现金$372亿后，EV约$1,288亿，EV/EBIT仅约9.4倍。即使增长完全停滞，当前估值也意味着约8%的自由现金流收益率。详细DCF分析见下方。</p>
+  </div>
+</section>
+
+<!-- SECTION 9: DCF VALUATION -->
+<section id="dcf">
+  <h2><span class="num">09</span> 自由现金流预测 & DCF 估值</h2>
+  <p class="section-desc">基于保守假设的10年期DCF模型 — 巴菲特风格(保守、悲观、安全边际)</p>
+
+  <div class="card">
+    <h3>DCF 核心假设</h3>
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>假设参数</th>
+            <th>保守情景</th>
+            <th>中性情景</th>
+            <th>乐观情景</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>基准FCF (TTM)</td><td colspan="3" style="text-align:center">$131亿</td></tr>
+          <tr><td>前5年FCF增速</td><td>5%</td><td>10%</td><td>15%</td></tr>
+          <tr><td>后5年FCF增速</td><td>3%</td><td>6%</td><td>8%</td></tr>
+          <tr><td>永续增长率</td><td>2%</td><td>3%</td><td>3%</td></tr>
+          <tr><td>折现率 (WACC)</td><td>12%</td><td>10%</td><td>10%</td></tr>
+          <tr><td>净现金加回</td><td colspan="3" style="text-align:center">$372亿 (现金+投资-总负债)</td></tr>
+          <tr><td>稀释后ADS数量</td><td colspan="3" style="text-align:center">14.82亿 (59.3亿股 ÷ 4)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>10年自由现金流预测 — 保守情景 (单位: USD 亿)</h3>
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>年份</th>
+            <th>2025E</th>
+            <th>2026E</th>
+            <th>2027E</th>
+            <th>2028E</th>
+            <th>2029E</th>
+            <th>2030E</th>
+            <th>2031E</th>
+            <th>2032E</th>
+            <th>2033E</th>
+            <th>2034E</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>FCF增速</td><td>5%</td><td>5%</td><td>5%</td><td>5%</td><td>5%</td><td>3%</td><td>3%</td><td>3%</td><td>3%</td><td>3%</td></tr>
+          <tr class="highlight"><td>FCF</td><td>137.6</td><td>144.4</td><td>151.7</td><td>159.2</td><td>167.2</td><td>172.2</td><td>177.4</td><td>182.7</td><td>188.2</td><td>193.9</td></tr>
+          <tr><td>折现因子 @12%</td><td>0.893</td><td>0.797</td><td>0.712</td><td>0.636</td><td>0.567</td><td>0.507</td><td>0.452</td><td>0.404</td><td>0.361</td><td>0.322</td></tr>
+          <tr><td>FCF现值</td><td>122.8</td><td>115.1</td><td>108.0</td><td>101.2</td><td>94.8</td><td>87.3</td><td>80.2</td><td>73.8</td><td>67.9</td><td>62.4</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="dcf-summary">
+    <div class="dcf-card">
+      <div class="dcf-label">保守估值</div>
+      <div class="dcf-value" style="color:var(--red)">$129</div>
+      <div class="dcf-note">DCF $1,910亿 / 14.82亿ADS<br>折现率12% · 增长5%→3%</div>
+    </div>
+    <div class="dcf-card">
+      <div class="dcf-label">中性估值</div>
+      <div class="dcf-value" style="color:var(--accent)">$172</div>
+      <div class="dcf-note">DCF $2,549亿 / 14.82亿ADS<br>折现率10% · 增长10%→6%</div>
+    </div>
+    <div class="dcf-card">
+      <div class="dcf-label">乐观估值</div>
+      <div class="dcf-value" style="color:var(--green)">$224</div>
+      <div class="dcf-note">DCF $3,320亿 / 14.82亿ADS<br>折现率10% · 增长15%→8%</div>
+    </div>
+    <div class="dcf-card">
+      <div class="dcf-label">当前股价</div>
+      <div class="dcf-value" style="color:var(--text-dim)">≈$112</div>
+      <div class="dcf-note">2025年2月参考价<br>总市值约$1,660亿</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>DCF 敏感性分析 — 每ADS内在价值 (USD)</h3>
+    <div class="data-table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>折现率 \ 增长率</th>
+            <th>永续2%</th>
+            <th>永续2.5%</th>
+            <th>永续3%</th>
+            <th>永续3.5%</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>WACC 8%</td><td>$201</td><td>$221</td><td>$248</td><td>$286</td></tr>
+          <tr><td>WACC 10%</td><td>$148</td><td>$158</td><td>$172</td><td>$189</td></tr>
+          <tr class="highlight"><td>WACC 12%</td><td>$117</td><td>$123</td><td>$129</td><td>$138</td></tr>
+          <tr><td>WACC 14%</td><td>$97</td><td>$101</td><td>$105</td><td>$110</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- SECTION 10: CONCLUSION -->
+<section id="conclusion">
+  <h2><span class="num">10</span> 投资结论</h2>
+
+  <div class="conclusion-box">
+    <h3>巴菲特视角：值得买入</h3>
+    <p>
+      PDD 在巴菲特的8项核心投资标准中获得 <strong>5项通过、3项关注</strong>（无一项不通过）。
+      公司拥有强大的护城河（网络效应+极致性价比）、超强的资产负债表（净现金$372亿+）、
+      极高的资本回报率（ROE>29%）、以及清晰可理解的商业模式。
+      <br><br>
+      主要风险在于：Temu海外烧钱期导致利润率短期承压、经营现金流波动较大、中概股VIE结构治理风险。
+      但以当前估值水平（TTM P/E≈12x，EV/EBIT≈9.4x），市场已经充分定价了这些风险。
+      <br><br>
+      <strong>保守DCF内在价值约$129/ADS</strong>，当前价格约$112，存在约15%的安全边际。
+      中性情景下内在价值$172，折价约35%。
+      即使在最保守的假设下（12%折现率+永续2%增长），内在价值$117仍高于当前股价。
+    </p>
+
+    <div class="price-targets">
+      <div class="price-target">
+        <div class="pt-label">当前参考价</div>
+        <div class="pt-value current">$112</div>
+      </div>
+      <div class="price-target">
+        <div class="pt-label">合理买入价</div>
+        <div class="pt-value fair">$129</div>
+      </div>
+      <div class="price-target">
+        <div class="pt-label">安全边际买入价</div>
+        <div class="pt-value safety">$103</div>
+      </div>
+      <div class="price-target">
+        <div class="pt-label">中性内在价值</div>
+        <div class="pt-value fair">$172</div>
+      </div>
+    </div>
+
+    <p style="margin-top: 28px; font-size: 13px; color: var(--text-dim);">
+      合理买入价 = 保守DCF估值 $129 · 安全边际买入价 = 保守DCF × 0.8 = $103<br>
+      当前价格低于合理估值，处于"可买入"区间；若回调至 $103 以下，则为"强烈买入"。
+    </p>
+  </div>
+</section>
+
+<!-- DISCLAIMER -->
+<div class="disclaimer">
+  ⚠️ 免责声明：本分析仅供学习交流，不构成投资建议。数据来源于SEC EDGAR公开披露文件，RMB→USD按各季度末汇率折算 (Q2 2025: 1 USD = 7.1636 RMB)。模型假设具有主观性。
+  投资有风险，中概股尤其面临地缘政治、监管、VIE架构等特殊风险。请独立思考，审慎决策。
+  <br>分析日期：2025年2月 · 数据截至：2025年6月30日 (Q2 2025)
+</div>
+
+</div><!-- container -->
+
+<script>
+// ===== CHART.JS CONFIG =====
+Chart.defaults.color = '#6b7280';
+Chart.defaults.borderColor = '#1e2333';
+Chart.defaults.font.family = "'DM Mono', monospace";
+Chart.defaults.font.size = 11;
+
+const QUARTERS = ['Q2 2024', 'Q3 2024', 'Q4 2024', 'Q1 2025', 'Q2 2025'];
+
+// Revenue data (USD millions) — RMB ÷ 7.1636
+const revenue = [13552, 13876, 15154, 13186, 14516];
+const netIncome = [4470, 3488, 3760, 2032, 4293];
+const grossProfit = [8848, 8332, 10539, 7542, 8114];
+const opProfit = [4547, 3392, 3506, 2217, 3601];
+
+// YoY % — same as before (percentage changes are currency-neutral)
+const revenueYoY = [67, 44, 24, 10, 7];
+const netIncomeYoY = [144, 61, 18, -47, -4];
+
+// QoQ %
+const revenueQoQ = [null, 2.4, 11.3, -13.5, 8.7];
+const netIncomeQoQ = [null, -22.0, 9.9, -46.3, 108.6];
+
+// Revenue structure (USD millions)
+const marketing = [6858, 6890, 7810, 6714, 7776];
+const transaction = [6694, 6986, 7343, 6472, 6740];
+
+// Expenses (USD millions)
+const salesMktg = [3637, 4257, 4296, 4606, 3798];
+const gna = [257, 252, 286, 229, 214];
+const rnd = [406, 428, 518, 493, 501];
+const costRev = [4704, 5544, 4615, 5644, 6402];
+
+// Margins — same percentages
+const grossMargin = revenue.map((r,i) => (grossProfit[i]/r*100).toFixed(1));
+const opMargin = revenue.map((r,i) => (opProfit[i]/r*100).toFixed(1));
+const netMargin = revenue.map((r,i) => (netIncome[i]/r*100).toFixed(1));
+
+// Cash flow (USD millions)
+const opCashflow = [6114, 3843, 4048, 2139, 3021];
+
+// ===== REVENUE YoY CHART =====
+new Chart(document.getElementById('revenueYoYChart'), {
+  type: 'bar',
+  data: {
+    labels: QUARTERS,
+    datasets: [{
+      label: '营收同比增速 (%)',
+      data: revenueYoY,
+      backgroundColor: revenueYoY.map(v => v >= 0 ? 'rgba(245,158,11,0.7)' : 'rgba(239,68,68,0.7)'),
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ctx.parsed.y + '%' }}
+    },
+    scales: {
+      y: { ticks: { callback: v => v + '%' }, grid: { color: '#1e2333' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== REVENUE QoQ CHART =====
+new Chart(document.getElementById('revenueQoQChart'), {
+  type: 'bar',
+  data: {
+    labels: QUARTERS,
+    datasets: [{
+      label: '营收环比增速 (%)',
+      data: revenueQoQ,
+      backgroundColor: (revenueQoQ).map(v => v === null ? 'transparent' : v >= 0 ? 'rgba(59,130,246,0.7)' : 'rgba(239,68,68,0.7)'),
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => (ctx.parsed.y !== null ? ctx.parsed.y + '%' : 'N/A') }}
+    },
+    scales: {
+      y: { ticks: { callback: v => v + '%' }, grid: { color: '#1e2333' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== NET INCOME YoY =====
+new Chart(document.getElementById('netIncomeYoYChart'), {
+  type: 'bar',
+  data: {
+    labels: QUARTERS,
+    datasets: [{
+      label: '净利润同比 (%)',
+      data: netIncomeYoY,
+      backgroundColor: netIncomeYoY.map(v => v >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)'),
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.parsed.y + '%' }} },
+    scales: {
+      y: { ticks: { callback: v => v + '%' }, grid: { color: '#1e2333' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== NET INCOME QoQ =====
+new Chart(document.getElementById('netIncomeQoQChart'), {
+  type: 'bar',
+  data: {
+    labels: QUARTERS,
+    datasets: [{
+      label: '净利润环比 (%)',
+      data: netIncomeQoQ,
+      backgroundColor: (netIncomeQoQ).map(v => v === null ? 'transparent' : v >= 0 ? 'rgba(168,85,247,0.7)' : 'rgba(239,68,68,0.7)'),
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => (ctx.parsed.y !== null ? ctx.parsed.y + '%' : 'N/A') }} },
+    scales: {
+      y: { ticks: { callback: v => v + '%' }, grid: { color: '#1e2333' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== REVENUE STRUCTURE =====
+new Chart(document.getElementById('revenueStackChart'), {
+  type: 'bar',
+  data: {
+    labels: QUARTERS,
+    datasets: [
+      { label: '在线营销服务', data: marketing.map(v=>v/100), backgroundColor: 'rgba(245,158,11,0.8)', borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 } },
+      { label: '交易服务', data: transaction.map(v=>v/100), backgroundColor: 'rgba(59,130,246,0.8)', borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 } }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'rect', padding: 16 } } },
+    scales: {
+      x: { stacked: true, grid: { display: false } },
+      y: { stacked: true, ticks: { callback: v => '$' + v + '亿' }, grid: { color: '#1e2333' } }
+    }
+  }
+});
+
+// ===== EXPENSE CHART =====
+new Chart(document.getElementById('expenseChart'), {
+  type: 'bar',
+  data: {
+    labels: QUARTERS,
+    datasets: [
+      { label: '营业成本', data: costRev.map(v=>v/100), backgroundColor: 'rgba(239,68,68,0.7)' },
+      { label: '销售及营销', data: salesMktg.map(v=>v/100), backgroundColor: 'rgba(249,115,22,0.7)' },
+      { label: '研发', data: rnd.map(v=>v/100), backgroundColor: 'rgba(6,182,212,0.7)' },
+      { label: '管理', data: gna.map(v=>v/100), backgroundColor: 'rgba(168,85,247,0.7)' }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'rect', padding: 12, font: { size: 10 } } } },
+    scales: {
+      x: { stacked: true, grid: { display: false } },
+      y: { stacked: true, ticks: { callback: v => '$' + v + '亿' }, grid: { color: '#1e2333' } }
+    }
+  }
+});
+
+// ===== MARGIN CHART =====
+new Chart(document.getElementById('marginChart'), {
+  type: 'line',
+  data: {
+    labels: QUARTERS,
+    datasets: [
+      { label: '毛利率', data: grossMargin, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.4, pointRadius: 5, borderWidth: 2.5 },
+      { label: '营业利润率', data: opMargin, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, tension: 0.4, pointRadius: 5, borderWidth: 2.5 },
+      { label: '净利率', data: netMargin, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', fill: true, tension: 0.4, pointRadius: 5, borderWidth: 2.5 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { usePointStyle: true, pointStyle: 'circle', padding: 20 } },
+      tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y + '%' } }
+    },
+    scales: {
+      y: { ticks: { callback: v => v + '%' }, grid: { color: '#1e2333' }, min: 10, max: 75 },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// ===== CASHFLOW CHART =====
+new Chart(document.getElementById('cashflowChart'), {
+  type: 'bar',
+  data: {
+    labels: QUARTERS,
+    datasets: [{
+      label: '经营现金流 ($亿)',
+      data: opCashflow.map(v => v/100),
+      backgroundColor: opCashflow.map(v => v > 4000 ? 'rgba(16,185,129,0.8)' : 'rgba(59,130,246,0.7)'),
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(1) + '亿' } } },
+    scales: {
+      y: { ticks: { callback: v => '$' + v + '亿' }, grid: { color: '#1e2333' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+
+// ===== SANKEY DIAGRAM =====
+function drawSankey() {
+  const container = document.getElementById('sankey-container');
+  const width = container.clientWidth;
+  const height = 550;
+
+  // Clear
+  container.innerHTML = '';
+
+  const svg = d3.select('#sankey-container')
+    .append('svg')
+    .attr('width', width)
+    .attr('height', height);
+
+  // Data in USD 亿 (Q2 2025)
+  const nodes = [
+    { name: "总收入 $145.2亿" },            // 0
+    { name: "在线营销 $77.8亿" },           // 1
+    { name: "交易服务 $67.4亿" },           // 2
+    { name: "毛利润 $81.1亿" },             // 3
+    { name: "营业成本 $64.0亿" },            // 4
+    { name: "营业利润 $36.0亿" },            // 5
+    { name: "销售营销 $38.0亿" },            // 6
+    { name: "研发费用 $5.0亿" },             // 7
+    { name: "管理费用 $2.1亿" },             // 8
+    { name: "税前利润 $49.6亿" },            // 9
+    { name: "投资收益 $14.6亿" },            // 10
+    { name: "其他净额 $(1.0)亿" },           // 11
+    { name: "净利润 $42.9亿" },              // 12
+    { name: "所得税 $6.7亿" },               // 13
+    { name: "经营现金流 $30.2亿" },           // 14
+    { name: "营运资本变动 $(12.8)亿" },       // 15
+    { name: "自由现金流 ≈$30.0亿" },          // 16
+  ];
+
+  const links = [
+    { source: 1, target: 0, value: 778 },  // 营销服务→总收入
+    { source: 2, target: 0, value: 674 },  // 交易服务→总收入
+    { source: 0, target: 3, value: 811 },  // 总收入→毛利润
+    { source: 0, target: 4, value: 640 },  // 总收入→营业成本
+    { source: 3, target: 5, value: 360 },  // 毛利润→营业利润
+    { source: 3, target: 6, value: 380 },  // 毛利润→销售营销
+    { source: 3, target: 7, value: 50 },   // 毛利润→研发
+    { source: 3, target: 8, value: 21 },   // 毛利润→管理
+    { source: 5, target: 9, value: 360 },  // 营业利润→税前利润
+    { source: 10, target: 9, value: 136 }, // 投资收益→税前利润
+    { source: 9, target: 12, value: 429 }, // 税前利润→净利润
+    { source: 9, target: 13, value: 67 },  // 税前利润→所得税
+    { source: 12, target: 14, value: 302 },// 净利润→经营现金流
+    { source: 12, target: 15, value: 128 },// 净利润→营运资本
+    { source: 14, target: 16, value: 300 },// 经营现金流→自由现金流
+  ];
+
+  const sankey = d3.sankey()
+    .nodeId(d => d.index)
+    .nodeWidth(18)
+    .nodePadding(18)
+    .nodeAlign(d3.sankeyJustify)
+    .extent([[40, 20], [width - 200, height - 20]]);
+
+  const graph = sankey({
+    nodes: nodes.map((d, i) => ({ ...d, index: i })),
+    links: links.map(d => ({ ...d }))
+  });
+
+  const colorScale = [
+    '#f59e0b', '#3b82f6', '#06b6d4', // sources
+    '#10b981', '#ef4444',              // gross/cost
+    '#22c55e', '#f97316', '#06b6d4', '#a855f7', // ops
+    '#eab308', '#6366f1', '#818cf8',   // pretax
+    '#10b981', '#ef4444',              // net/tax
+    '#22c55e', '#ef4444', '#10b981'    // fcf
+  ];
+
+  // Links
+  svg.append('g')
+    .selectAll('path')
+    .data(graph.links)
+    .join('path')
+    .attr('d', d3.sankeyLinkHorizontal())
+    .attr('fill', 'none')
+    .attr('stroke', (d, i) => {
+      const sourceColor = colorScale[d.source.index] || '#6b7280';
+      return sourceColor;
+    })
+    .attr('stroke-opacity', 0.3)
+    .attr('stroke-width', d => Math.max(1, d.width))
+    .on('mouseover', function() { d3.select(this).attr('stroke-opacity', 0.5); })
+    .on('mouseout', function() { d3.select(this).attr('stroke-opacity', 0.3); });
+
+  // Nodes
+  svg.append('g')
+    .selectAll('rect')
+    .data(graph.nodes)
+    .join('rect')
+    .attr('x', d => d.x0)
+    .attr('y', d => d.y0)
+    .attr('width', d => d.x1 - d.x0)
+    .attr('height', d => Math.max(1, d.y1 - d.y0))
+    .attr('fill', (d, i) => colorScale[i] || '#6b7280')
+    .attr('rx', 3)
+    .attr('opacity', 0.9);
+
+  // Labels
+  svg.append('g')
+    .selectAll('text')
+    .data(graph.nodes)
+    .join('text')
+    .attr('x', d => d.x0 < width / 2 ? d.x1 + 8 : d.x0 - 8)
+    .attr('y', d => (d.y0 + d.y1) / 2)
+    .attr('dy', '0.35em')
+    .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+    .text(d => d.name)
+    .attr('fill', '#c8cdd8')
+    .attr('font-size', '11px')
+    .attr('font-family', "'DM Mono', 'Noto Serif SC', monospace");
+}
+
+drawSankey();
+window.addEventListener('resize', drawSankey);
+
+// ===== SCROLL ANIMATIONS =====
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('animate');
+    }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('section, .card').forEach(el => {
+  observer.observe(el);
+});
+</script>
+</body>
+</html>
